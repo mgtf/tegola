@@ -85,7 +85,17 @@ func init() {
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	c := dict.M(config)
-	p := Provider{}
+
+	//var srid = int64(DefaultSRID)
+	/*
+		if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
+			return nil, err
+		}
+	*/
+
+	p := Provider{
+		srid: int(int64(DefaultSRID)),
+	}
 	layers, ok := c[ConfigKeyLayers].([]map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
@@ -163,12 +173,15 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 
+	/* FIXME */
+	plyr.SRID = DefaultSRID
+
 	textent := tile.BoundingBox()
-	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	minGeo, err := basic.FromWebMercator(tegola.WGS84, &basic.Point{textent.Minx, textent.Miny})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
+	maxGeo, err := basic.FromWebMercator(tegola.WGS84, &basic.Point{textent.Maxx, textent.Maxy})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
@@ -181,9 +194,12 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
 	}
 
-	q := elastic.NewGeoBoundingBoxQuery("jobs")
-	q.TopRight(maxPt.Y(), maxPt.X())
-	q.BottomLeft(minPt.Y(), minPt.X())
+	q := elastic.NewGeoBoundingBoxQuery("location")
+	q.TopRight(minPt.Y(), minPt.X())
+	q.BottomLeft(maxPt.Y(), maxPt.X())
+
+	//q.TopRight(minPt.Y(), minPt.X())
+	//q.BottomLeft(maxPt.Y(), maxPt.X())
 
 	client, err := elastic.NewClient(
 		elastic.SetURL("http://localhost:9200", "http://localhost:9201"),
