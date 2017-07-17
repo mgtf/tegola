@@ -15,6 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	_ "./../../provider/elasticsearch"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	_ "github.com/terranodo/tegola/provider/postgis"
